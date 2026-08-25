@@ -8,15 +8,23 @@ export read_record
 export mask_missing
 export decode_float64
 
+# Header of the gt3.
+# See https://www.gfd-dennou.org/library/gtool/gtool3/doc/gtool.pdf
 const HEADER_NAMES = [
-    "IDFM", "DSET", "ITEM",
+    "IDFM",
+    "DSET",
+    "ITEM",
     "EDIT1", "EDIT2", "EDIT3", "EDIT4",
     "EDIT5", "EDIT6", "EDIT7", "EDIT8",
     "FNUM", "DNUM",
-    "TITL1", "TITL2", "UNIT",
+    "TITL1", "TITL2",
+    "UNIT",
     "ETTL1", "ETTL2", "ETTL3", "ETTL4",
     "ETTL5", "ETTL6", "ETTL7", "ETTL8",
-    "TIME", "UTIM", "DATE", "TDUR",
+    "TIME",
+    "UTIM",
+    "DATE",
+    "TDUR",
     "AITM1", "ASTR1", "AEND1",
     "AITM2", "ASTR2", "AEND2",
     "AITM3", "ASTR3", "AEND3",
@@ -31,12 +39,13 @@ const HEADER_NAMES = [
     "SIZE"
 ]
 
+# Container of a 3-D data
 struct GTRecord{T}
     header::Dict{String,String}
     data::Array{T,3}
 end
 
-
+# byte b[4] -> Uint32 value
 function uint32_from_bytes(b::AbstractVector{UInt8}, endian::Symbol)
     @assert length(b) == 4
     if endian == :big
@@ -54,6 +63,7 @@ function uint32_from_bytes(b::AbstractVector{UInt8}, endian::Symbol)
     end
 end
 
+# byte b[8] -> Uint64 value
 function uint64_from_bytes(b::AbstractVector{UInt8}, endian::Symbol)
     @assert length(b) == 8
     x = UInt64(0)
@@ -71,18 +81,21 @@ function uint64_from_bytes(b::AbstractVector{UInt8}, endian::Symbol)
     return x
 end
 
-# read 4 bytes for sequential access
+# read 4 bytes (for sequential access mode)
 function read_marker(io, endian::Symbol)
     b = read(io, 4)
     length(b) == 4 || error("Unexpected EOF while reading record marker")
     return Int(uint32_from_bytes(b, endian))
 end
 
-# sequential access
+# read one data in sequential access mode
 function read_record(io, endian::Symbol)
+    # first 4-byte
     n1 = read_marker(io, endian)
+    # data
     data = read(io, n1)
     length(data) == n1 || error("Unexpected EOF inside Fortran record")
+    # last 4-byte: must be same as the first 4-byte
     n2 = read_marker(io, endian)
     n1 == n2 || error("Fortran record markers disagree: $n1 != $n2")
     return data
@@ -205,6 +218,7 @@ function read_gt3(filename::AbstractString;
             push!(records, GTRecord(h, a))
         end
     end
+    
     return records  # records[i]: i-th header and data
 end
 
@@ -218,6 +232,15 @@ function mask_missing(r::GTRecord; replacement=NaN)
     return a
 end
 
+"""
+    headerinfo(r::GTRecord)
+
+Print a summary of the header and data dimensions of `r` to standard output.
+
+The summary contains the dataset and item names, title, unit, time, date, data
+format, missing value, axis names and ranges, header size, and the shape of the
+data array. Returns `nothing`.
+"""
 function headerinfo(r::GTRecord)
     h = r.header
     println("DSET  : ", h["DSET"])
@@ -231,8 +254,7 @@ function headerinfo(r::GTRecord)
     println("AITM1 : ", repr(h["AITM1"]), "  ", h["ASTR1"], ":", h["AEND1"])
     println("AITM2 : ", repr(h["AITM2"]), "  ", h["ASTR2"], ":", h["AEND2"])
     println("AITM3 : ", repr(h["AITM3"]), "  ", h["ASTR3"], ":", h["AEND3"])
-    println("SIZE  : ", h["SIZE"])
-    println("shape : ", size(r.data))
+    println("SIZE  : ", h["SIZE"], "  ", size(r.data))
 end
 
 end # module Gtool3
