@@ -195,7 +195,9 @@ end
 
 function read_gt3(filename::AbstractString;
                   endian::Symbol=:auto,
-                  sequential::Symbol=:auto)
+                  sequential::Symbol=:auto,
+                  missing_replacement=NaN)
+    
     records = GTRecord[]
     open(filename, "r") do io
         detected_seq, detected_endian = detect_gt3_format(io)
@@ -210,11 +212,21 @@ function read_gt3(filename::AbstractString;
             h = parse_header(hbuf)
             nx, ny, nz = dimensions(h)
             nbyte = nx * ny * nz * element_size(h)
+            
             # read data
             dbuf = seq ? read_record(io, en) : read(io, nbyte)
             length(dbuf) == nbyte || error("Data size mismatch: expected $nbyte, got $(length(dbuf))")
             x = decode_data(dbuf, h, en)
             a = reshape(x, nx, ny, nz)
+
+            # replace missing values with missing_replacement
+            s = strip(h["MISS"])
+            if ! isempty(s)
+                miss = parse(Float64, replace(s, 'D' => 'E', 'd' => 'e'))
+                a[a .== miss] .= replacement
+            end
+
+            # save header and data
             push!(records, GTRecord(h, a))
         end
     end
@@ -245,7 +257,7 @@ function headerinfo(r::GTRecord)
     h = r.header
     println("DSET  : ", h["DSET"])
     println("ITEM  : ", h["ITEM"])
-    println("TITLE : ", strip(h["TITL1"] * " " * h["TITL2"]))
+    println("TITLE : ", strip(h["TITL1"] * h["TITL2"]))
     println("UNIT  : ", h["UNIT"])
     println("TIME  : ", h["TIME"], " ", h["UTIM"])
     println("DATE  : ", h["DATE"])
@@ -254,7 +266,7 @@ function headerinfo(r::GTRecord)
     println("AITM1 : ", repr(h["AITM1"]), "  ", h["ASTR1"], ":", h["AEND1"])
     println("AITM2 : ", repr(h["AITM2"]), "  ", h["ASTR2"], ":", h["AEND2"])
     println("AITM3 : ", repr(h["AITM3"]), "  ", h["ASTR3"], ":", h["AEND3"])
-    println("SIZE  : ", h["SIZE"], "  ", size(r.data))
+    println("SIZE  : ", h["SIZE"], " ", size(r.data))
 end
 
 end # module Gtool3
