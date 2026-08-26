@@ -7,7 +7,7 @@
 
 ## Usage
 ```julia
-Pkg.add(url="ahttps://github.com/kodamail/Gtool3.jl")
+Pkg.add(url="https://github.com/kodamail/Gtool3.jl")
 using Gtool3
 
 r = read_gt("var.gt3")
