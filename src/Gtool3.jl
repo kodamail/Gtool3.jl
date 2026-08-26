@@ -223,7 +223,7 @@ function read_gt3(filename::AbstractString;
             s = strip(h["MISS"])
             if ! isempty(s)
                 miss = parse(Float64, replace(s, 'D' => 'E', 'd' => 'e'))
-                a[a .== miss] .= replacement
+                a[a .== miss] .= missing_replacement
             end
 
             # save header and data
