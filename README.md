@@ -10,7 +10,7 @@
 Pkg.add(url="https://github.com/kodamail/Gtool3.jl")
 using Gtool3
 
-r = read_gt("var.gt3")
+r = read_gt3("var.gt3")
 
 headerinfo(r[1])
 r[1].data
