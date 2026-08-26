@@ -5,7 +5,7 @@ export read_gt3
 export headerinfo
 
 export read_record
-export mask_missing
+#export mask_missing
 export decode_float64
 
 # Header of the gt3.
